@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PlayCircle, Plus, ScanSearch, Trash2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis, ResponsiveContainer } from 'recharts';
 import { PageHeader, Panel } from '@/components/common/page-layout';
+import { ActiveDatasetIndicator } from '@/components/common/active-dataset-indicator';
 import { NotConnectedState } from '@/components/common/state-panels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,7 @@ export function DetectionPage() {
   if (!isBackendConfigured) {
     return (
       <div className="space-y-8">
-        <PageHeader title="Anomaly Detection" description="Run threshold-based and statistical anomaly detection on your telemetry." />
+        <PageHeader title="Anomaly Detection" description="Run threshold-based and statistical anomaly detection on your telemetry." actions={<ActiveDatasetIndicator />} />
         <Panel><NotConnectedState /></Panel>
       </div>
     );

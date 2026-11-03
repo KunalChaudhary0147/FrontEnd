@@ -139,6 +139,59 @@ export interface Catalog {
   entities: string[];
 }
 
+export type DatasetStatus = 'ready' | 'processing' | 'failed';
+
+export interface Dataset {
+  id: string;
+  name: string;
+  records: number;
+  entities: number;
+  metrics: string[];
+  upload_date: string;
+  source_type: string;
+  status: DatasetStatus;
+  file_hash?: string | null;
+  date_range?: { start: string; end: string } | null;
+}
+
+export interface DatasetListResponse {
+  datasets: Dataset[];
+}
+
+export interface DatasetPreviewResponse {
+  columns: string[];
+  column_types: Record<string, string>;
+  records: TelemetryPoint[];
+  first_timestamp: string | null;
+  last_timestamp: string | null;
+}
+
+export interface DataQuality {
+  total_records: number;
+  missing_timestamps: number;
+  missing_metric_values: number;
+  invalid_timestamps: number;
+  invalid_numerical_values: number;
+  duplicate_records: number;
+  unique_entities: number;
+  available_metrics: string[];
+}
+
+export interface DatasetStatsResponse {
+  total_datasets: number;
+  total_records: number;
+  total_entities: number;
+  total_metrics: number;
+}
+
+export interface DatasetDeleteRequest {
+  dataset_ids: string[];
+}
+
+export interface DatasetDeleteResponse {
+  deleted: string[];
+}
+
 export interface OverviewData {
   totals: {
     telemetry_records: number;

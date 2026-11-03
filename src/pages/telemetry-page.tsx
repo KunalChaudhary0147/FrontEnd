@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { PageHeader, Panel } from '@/components/common/page-layout';
+import { ActiveDatasetIndicator } from '@/components/common/active-dataset-indicator';
 import { QueryContent } from '@/components/common/state-panels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

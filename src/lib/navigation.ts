@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Activity, Bell, History, LayoutDashboard, ScanSearch, SlidersHorizontal, Upload } from 'lucide-react';
+import { Activity, Bell, Database, History, LayoutDashboard, ScanSearch, SlidersHorizontal, Upload } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const PAGES = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'ingestion', label: 'Data Ingestion', icon: Upload },
+  { id: 'datasets', label: 'Dataset Manager', icon: Database },
   { id: 'telemetry', label: 'Telemetry', icon: Activity },
   { id: 'historical', label: 'Historical Analysis', icon: History },
   { id: 'detection', label: 'Anomaly Detection', icon: ScanSearch },

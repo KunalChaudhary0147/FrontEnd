@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Activity, Bell, Database, Gauge, Siren, Waypoints } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Panel, PageHeader } from '@/components/common/page-layout';
+import { ActiveDatasetIndicator } from '@/components/common/active-dataset-indicator';
 import { SeverityBadge } from '@/components/common/severity-badge';
 import { StatCard } from '@/components/common/stat-card';
 import { QueryContent } from '@/components/common/state-panels';
@@ -57,6 +58,7 @@ export function OverviewPage() {
       <PageHeader
         title="Overview"
         description="A snapshot of telemetry volume, detected anomalies, and the alerts that need attention."
+        actions={<ActiveDatasetIndicator />}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">

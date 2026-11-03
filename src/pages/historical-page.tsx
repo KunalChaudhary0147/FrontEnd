@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { PageHeader, Panel } from '@/components/common/page-layout';
+import { ActiveDatasetIndicator } from '@/components/common/active-dataset-indicator';
 import { QueryContent } from '@/components/common/state-panels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ export function HistoricalPage() {
       <PageHeader
         title="Historical Analysis"
         description="Investigate past telemetry records and detection results, and export them for further review."
+        actions={<ActiveDatasetIndicator />}
       />
       <Tabs defaultValue="telemetry">
         <TabsList>
