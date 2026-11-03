@@ -83,8 +83,9 @@ export function AlertsPage() {
           <div className="flex items-center gap-2">
             <ActiveDatasetIndicator />
             <Button variant="outline" size="sm" onClick={() => query.refetch()}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
+              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+            </Button>
+          </div>
         }
       />
 

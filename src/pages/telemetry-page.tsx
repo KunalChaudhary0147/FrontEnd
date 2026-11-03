@@ -83,7 +83,8 @@ export function TelemetryPage() {
         title="Telemetry Explorer"
         description="Browse ingested telemetry records, filter by time and attribute, and plot metric values over time."
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <ActiveDatasetIndicator />
             <Button variant="outline" size="sm" onClick={() => telemetryQuery.refetch()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Refresh
             </Button>
