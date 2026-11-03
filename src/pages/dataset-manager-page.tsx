@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CheckCheck,
   Database,
@@ -91,7 +91,6 @@ export function DatasetManagerPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sizeFilter, setSizeFilter] = useState<SizeFilter>('all');
   const [metricFilter, setMetricFilter] = useState('__all__');
-  const [entityFilter, setEntityFilter] = useState('__all__');
   const [sourceFilter, setSourceFilter] = useState('__all__');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [page, setPage] = useState(0);
@@ -113,14 +112,6 @@ export function DatasetManagerPage() {
     return [...set].sort();
   }, [datasets]);
 
-  const allEntities = useMemo(() => {
-    const set = new Set<string>();
-    datasets.forEach((d) => {
-      if (d.date_range) set.add(String(d.entities));
-    });
-    return [];
-  }, [datasets]);
-
   const allSources = useMemo(() => {
     const set = new Set<string>();
     datasets.forEach((d) => set.add(d.source_type));
@@ -133,10 +124,9 @@ export function DatasetManagerPage() {
     if (statusFilter !== 'all') count += 1;
     if (sizeFilter !== 'all') count += 1;
     if (metricFilter !== '__all__') count += 1;
-    if (entityFilter !== '__all__') count += 1;
     if (sourceFilter !== '__all__') count += 1;
     return count;
-  }, [dateFilter, statusFilter, sizeFilter, metricFilter, entityFilter, sourceFilter]);
+  }, [dateFilter, statusFilter, sizeFilter, metricFilter, sourceFilter]);
 
   const filteredDatasets = useMemo(() => {
     let result = datasets;
@@ -233,7 +223,6 @@ export function DatasetManagerPage() {
     setStatusFilter('all');
     setSizeFilter('all');
     setMetricFilter('__all__');
-    setEntityFilter('__all__');
     setSourceFilter('__all__');
     setSortBy('newest');
   };
@@ -297,7 +286,9 @@ export function DatasetManagerPage() {
     return (
       <div className="space-y-8">
         <PageHeader title="Dataset Manager" description="Manage uploaded datasets, inspect data quality, select datasets for analysis, and organize your infrastructure telemetry." />
-        <Panel><QueryContent state={listQuery.state}>{() => null}</QueryContent></Panel>
+        <Panel>
+          <QueryContent state={listQuery.state}>{() => null}</QueryContent>
+        </Panel>
       </div>
     );
   }
