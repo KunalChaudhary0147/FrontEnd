@@ -11,34 +11,25 @@ import { IngestionPage } from '@/pages/ingestion-page';
 import { OverviewPage } from '@/pages/overview-page';
 import { TelemetryPage } from '@/pages/telemetry-page';
 import type { PageId } from '@/lib/navigation';
+import { ErrorBoundary } from '@/components/common/error-boundary';
 
 function App() {
   return (
     <ActiveConfigProvider>
       <ActiveDatasetProvider>
         <AppShell>
-          {(page: PageId) => {
-            switch (page) {
-              case 'overview':
-                return <OverviewPage />;
-              case 'ingestion':
-                return <IngestionPage />;
-              case 'datasets':
-                return <DatasetManagerPage />;
-              case 'telemetry':
-                return <TelemetryPage />;
-              case 'historical':
-                return <HistoricalPage />;
-              case 'detection':
-                return <DetectionPage />;
-              case 'alerts':
-                return <AlertsPage />;
-              case 'configuration':
-                return <ConfigurationPage />;
-              default:
-                return null;
-            }
-          }}
+          {(page: PageId) => (
+            <ErrorBoundary key={page}>
+              {page === 'overview' && <OverviewPage />}
+              {page === 'ingestion' && <IngestionPage />}
+              {page === 'datasets' && <DatasetManagerPage />}
+              {page === 'telemetry' && <TelemetryPage />}
+              {page === 'historical' && <HistoricalPage />}
+              {page === 'detection' && <DetectionPage />}
+              {page === 'alerts' && <AlertsPage />}
+              {page === 'configuration' && <ConfigurationPage />}
+            </ErrorBoundary>
+          )}
         </AppShell>
         <Toaster />
       </ActiveDatasetProvider>

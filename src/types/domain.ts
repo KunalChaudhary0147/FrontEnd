@@ -76,8 +76,11 @@ export interface TelemetryResponse {
 
 export interface IngestionSummary {
   records_ingested: number;
+  dataset_id?: string | null;
+  filename?: string | null;
   metrics: string[];
   entities: string[];
+  source_type?: string | null;
   date_range?: { start: string; end: string } | null;
   errors?: string[] | null;
 }
@@ -132,6 +135,12 @@ export interface EvaluationResult {
 export interface DetectionResponse {
   results: DetectionResult[];
   evaluation: EvaluationResult | null;
+}
+
+export interface DetectionRunSummary {
+  records: number;
+  inserted_results: number;
+  alerts: number;
 }
 
 export interface Catalog {
@@ -196,6 +205,9 @@ export interface OverviewData {
   totals: {
     telemetry_records: number;
     anomalies: number;
+    normal_observations: number;
+    anomalous_observations: number;
+    total_metrics: number;
     active_alerts: number;
     critical_alerts: number;
     monitored_entities: number;

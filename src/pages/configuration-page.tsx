@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { deleteConfiguration, saveConfiguration, useSavedConfigurations } from '@/hooks/use-saved-configurations';
 import { useActiveConfig } from '@/hooks/use-active-config';
 import { toast } from '@/hooks/use-toast';
-import { postJson, isBackendConfigured, describeError } from '@/lib/api';
+import { describeError } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { MetricThreshold, SeverityBoundaries } from '@/types/domain';
 
@@ -52,13 +52,6 @@ export function ConfigurationPage() {
     setSaving(true);
     try {
       await saveConfiguration(trimmed, config);
-      if (isBackendConfigured) {
-        try {
-          await postJson('/api/v1/configurations', { name: trimmed, config });
-        } catch {
-          // Supabase save still succeeded; backend sync is best-effort.
-        }
-      }
       setActiveName(trimmed);
       setName('');
       toast({ title: 'Configuration saved', description: `"${trimmed}" has been saved.` });

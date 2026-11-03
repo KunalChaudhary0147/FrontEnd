@@ -11,14 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useBackendQuery } from '@/hooks/use-backend-query';
+import { useActiveDatasets } from '@/hooks/use-active-datasets';
 import { useAlertStatuses } from '@/hooks/use-alert-statuses';
 import { toast } from '@/hooks/use-toast';
-import { postJson, describeError } from '@/lib/api';
+import { postJson, describeError, normalizeAlerts } from '@/lib/api';
 import { formatDateTime, formatDecimal, formatNumber } from '@/lib/format';
 import type { Alert, AlertListResponse, AlertStatus } from '@/types/domain';
 import { ALERT_STATUSES, SEVERITY_LEVELS } from '@/types/domain';
 
 export function AlertsPage() {
+  const { activeIds } = useActiveDatasets();
   const [severityFilter, setSeverityFilter] = useState('__all__');
   const [statusFilter, setStatusFilter] = useState('__all__');
   const [metricFilter, setMetricFilter] = useState('');
@@ -27,10 +29,13 @@ export function AlertsPage() {
   const [endDate, setEndDate] = useState('');
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
-  const query = useBackendQuery<AlertListResponse>('/api/v1/alerts');
+  const query = useBackendQuery<AlertListResponse>('/api/v1/alerts', { dataset_ids: activeIds === null ? undefined : activeIds }, normalizeAlerts);
   const { statuses, updateStatus } = useAlertStatuses();
 
-  const allAlerts = query.state.status === 'ready' ? query.state.data.alerts : [];
+  const allAlerts = useMemo(
+    () => (query.state.status === 'ready' ? query.state.data.alerts : []),
+    [query.state]
+  );
 
   const filteredAlerts = useMemo(() => {
     return allAlerts.filter((alert) => {
@@ -59,14 +64,10 @@ export function AlertsPage() {
   }, [allAlerts, statuses]);
 
   const handleStatusChange = async (alert: Alert, status: AlertStatus) => {
-    const ok = await updateStatus(alert.id, status);
-    if (!ok) {
-      toast({ title: 'Could not save status', description: 'The alert status could not be persisted. Rolling back.', variant: 'destructive' });
-      return;
-    }
     const endpoint = status === 'acknowledged' ? `/api/v1/alerts/${alert.id}/acknowledge` : `/api/v1/alerts/${alert.id}/resolve`;
     try {
       await postJson(endpoint, {});
+      await updateStatus(alert.id, status);
       toast({ title: `Alert ${status}`, description: `Alert ${alert.id} marked as ${status}.` });
       query.refetch();
     } catch (err) {

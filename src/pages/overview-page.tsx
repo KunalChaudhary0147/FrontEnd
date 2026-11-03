@@ -8,6 +8,8 @@ import { StatCard } from '@/components/common/stat-card';
 import { QueryContent } from '@/components/common/state-panels';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useBackendQuery, type BackendQueryState } from '@/hooks/use-backend-query';
+import { useActiveDatasets } from '@/hooks/use-active-datasets';
+import { normalizeOverview } from '@/lib/api';
 import { CHART_AXIS_TICK, CHART_COLORS, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE } from '@/lib/chart-theme';
 import { formatDateTime, formatDayLabel, formatNumber } from '@/lib/format';
 import { SEVERITY_STYLES } from '@/lib/severity';
@@ -51,7 +53,10 @@ function statValue(state: BackendQueryState<OverviewData>, pick: (data: Overview
 }
 
 export function OverviewPage() {
-  const { state, refetch } = useBackendQuery<OverviewData>('/overview');
+  const { activeIds } = useActiveDatasets();
+  const { state, refetch } = useBackendQuery<OverviewData>('/api/v1/overview', {
+    dataset_ids: activeIds === null ? undefined : activeIds,
+  }, normalizeOverview);
 
   return (
     <div className="space-y-8">
@@ -61,8 +66,9 @@ export function OverviewPage() {
         actions={<ActiveDatasetIndicator />}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <StatCard label="Telemetry records" value={statValue(state, (d) => d.totals.telemetry_records)} icon={Database} />
+        <StatCard label="Total metrics" value={statValue(state, (d) => d.totals.total_metrics)} icon={Gauge} />
         <StatCard label="Total anomalies" value={statValue(state, (d) => d.totals.anomalies)} icon={Activity} />
         <StatCard label="Active alerts" value={statValue(state, (d) => d.totals.active_alerts)} icon={Bell} />
         <StatCard label="Critical alerts" value={statValue(state, (d) => d.totals.critical_alerts)} icon={Siren} tone="danger" />

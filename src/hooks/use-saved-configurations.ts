@@ -1,9 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { apiRequest, describeError, postJson } from '@/lib/api';
 import { DEFAULT_CONFIG, type AnomalyConfig, type SavedConfiguration } from '@/types/domain';
 
 function parseConfig(raw: unknown): AnomalyConfig {
-  const partial = (raw && typeof raw === 'object' ? raw : {}) as Partial<AnomalyConfig>;
+  const source = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  const thresholds = source.thresholds && typeof source.thresholds === 'object'
+    ? Object.entries(source.thresholds as Record<string, { lower?: number; upper?: number }>).map(([metric, value]) => ({
+      metric, min: value.lower ?? null, max: value.upper ?? null,
+    }))
+    : [];
+  const severity = source.severity_policy && typeof source.severity_policy === 'object'
+    ? source.severity_policy as Partial<Record<string, number>>
+    : {};
+  const partial = {
+    metricThresholds: thresholds,
+    zScoreSensitivity: source.z_score_sensitivity,
+    rollingWindowSize: source.rolling_window_size,
+    multivariateSensitivity: source.multivariate_sensitivity,
+    severityBoundaries: {
+      low: severity.low ?? DEFAULT_CONFIG.severityBoundaries.low,
+      medium: severity.medium_score ?? DEFAULT_CONFIG.severityBoundaries.medium,
+      high: severity.high_score ?? DEFAULT_CONFIG.severityBoundaries.high,
+      critical: severity.critical_score ?? DEFAULT_CONFIG.severityBoundaries.critical,
+    },
+  } as Partial<AnomalyConfig>;
   return {
     ...DEFAULT_CONFIG,
     ...partial,
@@ -13,30 +33,36 @@ function parseConfig(raw: unknown): AnomalyConfig {
 }
 
 export async function listConfigurations(): Promise<SavedConfiguration[]> {
-  const { data, error } = await supabase
-    .from('anomaly_configurations')
-    .select('id, name, config, updated_at')
-    .order('name');
-  if (error) throw new Error('Could not load saved configurations.');
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-    config: parseConfig(row.config),
-    updated_at: row.updated_at as string,
-  }));
+  const data = await apiRequest<unknown[]>('/api/v1/configurations');
+  if (!Array.isArray(data)) throw new Error('Backend API error: invalid configurations response.');
+  return data.map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      id: String(item.id ?? item.name),
+      name: String(item.name),
+      config: parseConfig(item),
+      updated_at: String(item.updated_at ?? ''),
+    };
+  });
 }
 
 export async function saveConfiguration(name: string, config: AnomalyConfig) {
-  const { error } = await supabase.from('anomaly_configurations').upsert(
-    { name, config, updated_at: new Date().toISOString() },
-    { onConflict: 'name' }
-  );
-  if (error) throw new Error('Could not save the configuration. Please try again.');
+  await postJson('/api/v1/configurations', {
+    name,
+    thresholds: Object.fromEntries(config.metricThresholds
+      .filter((threshold) => threshold.metric.trim() && threshold.min !== null && threshold.max !== null)
+      .map((threshold) => [threshold.metric, { lower: threshold.min, upper: threshold.max }])),
+    z_score_sensitivity: config.zScoreSensitivity,
+    rolling_window_size: config.rollingWindowSize,
+    multivariate_sensitivity: config.multivariateSensitivity,
+    medium_score: config.severityBoundaries.medium,
+    high_score: config.severityBoundaries.high,
+    critical_score: config.severityBoundaries.critical,
+  });
 }
 
 export async function deleteConfiguration(id: string) {
-  const { error } = await supabase.from('anomaly_configurations').delete().eq('id', id);
-  if (error) throw new Error('Could not delete the configuration. Please try again.');
+  await apiRequest(`/api/v1/configurations/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 export function useSavedConfigurations() {
@@ -52,7 +78,7 @@ export function useSavedConfigurations() {
         setError(null);
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Could not load saved configurations.');
+        setError(describeError(err));
       })
       .finally(() => setLoading(false));
   }, []);

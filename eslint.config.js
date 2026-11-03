@@ -21,8 +21,32 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'badgeVariants',
+            'buttonVariants',
+            'toggleVariants',
+            'navigationMenuTriggerStyle',
+            'useFormField',
+            'Form',
+            'FormItem',
+            'FormLabel',
+            'FormControl',
+            'FormDescription',
+            'FormMessage',
+            'FormField',
+            'useActiveConfig',
+            'useActiveDatasets',
+          ],
+        },
       ],
+    },
+  },
+  {
+    files: ['src/components/ui/form.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   }
 );

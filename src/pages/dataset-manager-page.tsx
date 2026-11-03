@@ -50,7 +50,7 @@ import {
 import { useBackendQuery } from '@/hooks/use-backend-query';
 import { useActiveDatasets } from '@/hooks/use-active-datasets';
 import { toast } from '@/hooks/use-toast';
-import { apiRequest, isBackendConfigured } from '@/lib/api';
+import { apiRequest, isBackendConfigured, normalizeDataQuality, normalizeDatasetList, normalizeDatasetPreview, normalizeDatasetStats } from '@/lib/api';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import type {
   DataQuality,
@@ -101,10 +101,13 @@ export function DatasetManagerPage() {
   const [deleteTarget, setDeleteTarget] = useState<Dataset[] | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const statsQuery = useBackendQuery<DatasetStatsResponse>('/api/v1/datasets/stats');
-  const listQuery = useBackendQuery<DatasetListResponse>('/api/v1/datasets');
+  const statsQuery = useBackendQuery<DatasetStatsResponse>('/api/v1/datasets/stats', undefined, normalizeDatasetStats);
+  const listQuery = useBackendQuery<DatasetListResponse>('/api/v1/datasets', undefined, normalizeDatasetList);
 
-  const datasets = listQuery.state.status === 'ready' ? listQuery.state.data.datasets : [];
+  const datasets = useMemo(
+    () => (listQuery.state.status === 'ready' ? listQuery.state.data.datasets : []),
+    [listQuery.state]
+  );
 
   const allMetrics = useMemo(() => {
     const set = new Set<string>();
@@ -582,15 +585,19 @@ export function DatasetManagerPage() {
 
 function DatasetDetailSheet({ dataset, onClose }: { dataset: Dataset | null; onClose: () => void }) {
   const previewQuery = useBackendQuery<DatasetPreviewResponse>(
-    dataset ? `/api/v1/datasets/${dataset.id}/preview` : '/api/v1/datasets/_none/preview'
+    dataset ? `/api/v1/datasets/${dataset.id}/preview` : '/api/v1/datasets/_none/preview',
+    undefined,
+    normalizeDatasetPreview,
+    Boolean(dataset)
   );
   const qualityQuery = useBackendQuery<DataQuality>(
-    dataset ? `/api/v1/datasets/${dataset.id}/quality` : '/api/v1/datasets/_none/quality'
+    dataset ? `/api/v1/datasets/${dataset.id}/quality` : '/api/v1/datasets/_none/quality',
+    undefined,
+    normalizeDataQuality,
+    Boolean(dataset)
   );
 
   const preview = previewQuery.state.status === 'ready' ? previewQuery.state.data : null;
-  const quality = qualityQuery.state.status === 'ready' ? qualityQuery.state.data : null;
-
   return (
     <Sheet open={!!dataset} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">

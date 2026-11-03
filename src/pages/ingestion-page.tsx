@@ -9,7 +9,13 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { describeError, isBackendConfigured, uploadToBackend } from '@/lib/api';
+import {
+  describeError,
+  isBackendConfigured,
+  normalizeIngestionSummary,
+  notifyBackendDataChanged,
+  uploadToBackend,
+} from '@/lib/api';
 import { parseCsv, type ParsedCsv } from '@/lib/csv';
 import { formatNumber } from '@/lib/format';
 import type { IngestionSummary } from '@/types/domain';
@@ -138,7 +144,7 @@ export function IngestionPage() {
     !uploading;
 
   const handleUpload = async () => {
-    if (!file || !mapping.timestamp || mapping.metricColumns.length === 0 || !mapping.entity) return;
+    if (uploading || !file || !mapping.timestamp || mapping.metricColumns.length === 0 || !mapping.entity) return;
     setUploading(true);
     setError(null);
     setProgress(0);
@@ -149,9 +155,14 @@ export function IngestionPage() {
       fields.metric_columns = mapping.metricColumns;
       if (mapping.label) fields.label_column = mapping.label;
 
-      const result = await uploadToBackend<IngestionSummary>('/api/v1/ingestion/csv', fields, setProgress);
+      const response = await uploadToBackend<unknown>('/api/v1/ingestion/csv', fields, setProgress);
+      const result = normalizeIngestionSummary(response, file.name);
       setSummary(result);
-      toast({ title: 'Ingestion complete', description: `${formatNumber(result.records_ingested)} records were imported.` });
+      notifyBackendDataChanged();
+      toast({
+        title: 'Ingestion complete',
+        description: `${file.name}: ${formatNumber(result.records_ingested)} records were imported.`,
+      });
     } catch (err) {
       setError(describeError(err));
       toast({ title: 'Ingestion failed', description: describeError(err), variant: 'destructive' });
@@ -187,10 +198,11 @@ export function IngestionPage() {
 
       {summary && (
         <Panel title="Ingestion summary" description={`Imported from ${file?.name}`}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <SummaryStat label="Records ingested" value={formatNumber(summary.records_ingested)} />
             <SummaryStat label="Metrics" value={summary.metrics.length ? summary.metrics.join(', ') : '—'} />
             <SummaryStat label="Entities" value={summary.entities.length ? summary.entities.join(', ') : '—'} />
+            <SummaryStat label="Dataset ID" value={summary.dataset_id ?? '—'} />
           </div>
           {summary.date_range && (
             <p className="mt-4 text-sm text-muted-foreground">

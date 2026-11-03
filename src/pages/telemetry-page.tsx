@@ -10,8 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useBackendQuery } from '@/hooks/use-backend-query';
+import { useActiveDatasets } from '@/hooks/use-active-datasets';
 import { toast } from '@/hooks/use-toast';
-import { downloadFromBackend, describeError } from '@/lib/api';
+import { downloadFromBackend, describeError, normalizeCatalog, normalizeTelemetryResponse } from '@/lib/api';
 import { CHART_AXIS_TICK, CHART_COLORS, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE } from '@/lib/chart-theme';
 import { formatDateTime, formatDecimal, formatNumber } from '@/lib/format';
 import type { Catalog, TelemetryPoint, TelemetryResponse } from '@/types/domain';
@@ -20,6 +21,7 @@ const PAGE_SIZE = 25;
 const AXIS_PROPS = { tick: CHART_AXIS_TICK, axisLine: false, tickLine: false } as const;
 
 export function TelemetryPage() {
+  const { activeIds } = useActiveDatasets();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [metric, setMetric] = useState('__all__');
@@ -31,21 +33,24 @@ export function TelemetryPage() {
   const [page, setPage] = useState(0);
   const [exporting, setExporting] = useState(false);
 
-  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog');
+  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog', { dataset_ids: activeIds === null ? undefined : activeIds }, normalizeCatalog);
   const catalog = catalogQuery.state.status === 'ready' ? catalogQuery.state.data : null;
 
   const params = {
-    start_date: startDate || undefined,
-    end_date: endDate || undefined,
-    metric: metric !== '__all__' ? metric : undefined,
-    entity: entity !== '__all__' ? entity : undefined,
+    start: startDate || undefined,
+    end: endDate || undefined,
+    metric_name: metric !== '__all__' ? metric : undefined,
+    entity_id: entity !== '__all__' ? entity : undefined,
     source_type: sourceType !== '__all__' ? sourceType : undefined,
-    is_anomaly: anomalyStatus === 'anomaly' ? 'true' : anomalyStatus === 'normal' ? 'false' : undefined,
-    limit: 1000,
+    anomaly: anomalyStatus === 'anomaly' ? 'true' : anomalyStatus === 'normal' ? 'false' : undefined,
+    dataset_ids: activeIds === null ? undefined : activeIds,
   };
 
-  const telemetryQuery = useBackendQuery<TelemetryResponse>('/api/v1/telemetry', params);
-  const records = telemetryQuery.state.status === 'ready' ? telemetryQuery.state.data.records : [];
+  const telemetryQuery = useBackendQuery<TelemetryResponse>('/api/v1/telemetry', params, normalizeTelemetryResponse);
+  const records = useMemo(
+    () => (telemetryQuery.state.status === 'ready' ? telemetryQuery.state.data.records : []),
+    [telemetryQuery.state]
+  );
   const total = telemetryQuery.state.status === 'ready' ? telemetryQuery.state.data.total : 0;
 
   const chartData = useMemo(() => {

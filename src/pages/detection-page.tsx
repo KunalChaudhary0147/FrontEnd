@@ -11,17 +11,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBackendMutation } from '@/hooks/use-backend-mutation';
-import { useBackendQuery } from '@/hooks/use-backend-query';
+import { useActiveDatasets } from '@/hooks/use-active-datasets';
 import { toast } from '@/hooks/use-toast';
 import { isBackendConfigured } from '@/lib/api';
 import { CHART_AXIS_TICK, CHART_COLORS, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE } from '@/lib/chart-theme';
 import { formatDecimal, formatNumber, formatPercent } from '@/lib/format';
 import { SEVERITY_STYLES } from '@/lib/severity';
 import { useActiveConfig } from '@/hooks/use-active-config';
-import type { AdvancedMethod, DetectionResponse, MetricThreshold } from '@/types/domain';
+import type { AdvancedMethod, DetectionResponse, DetectionRunSummary, MetricThreshold } from '@/types/domain';
 import { ADVANCED_METHODS } from '@/types/domain';
 
 const AXIS_PROPS = { tick: CHART_AXIS_TICK, axisLine: false, tickLine: false } as const;
+
+function isDetectionResponse(value: DetectionResponse | DetectionRunSummary): value is DetectionResponse {
+  return Array.isArray((value as DetectionResponse).results);
+}
 
 export function DetectionPage() {
   if (!isBackendConfigured) {
@@ -50,8 +54,9 @@ export function DetectionPage() {
 
 function GenericDetectionTab() {
   const { config, setConfig } = useActiveConfig();
+  const { activeIds } = useActiveDatasets();
   const [results, setResults] = useState<DetectionResponse | null>(null);
-  const mutation = useBackendMutation<{ thresholds: MetricThreshold[] }, DetectionResponse>('/api/v1/detection/generic');
+  const mutation = useBackendMutation<{ thresholds: Record<string, { lower: number; upper: number }>; dataset_ids?: string[] }, DetectionResponse | DetectionRunSummary>('/api/v1/detection/generic');
 
   const addThreshold = () => {
     setConfig({
@@ -76,16 +81,27 @@ function GenericDetectionTab() {
   };
 
   const handleRun = async () => {
-    const valid = config.metricThresholds.filter((t) => t.metric.trim().length > 0);
+    const valid = config.metricThresholds.filter((t) => t.metric.trim().length > 0 && t.min !== null && t.max !== null);
     if (valid.length === 0) {
-      toast({ title: 'No thresholds', description: 'Add at least one metric threshold before running detection.', variant: 'destructive' });
+      toast({ title: 'Incomplete thresholds', description: 'Add a metric with both lower and upper bounds before running detection.', variant: 'destructive' });
       return;
     }
-    const data = await mutation.run({ thresholds: valid });
+    const data = await mutation.run({
+      thresholds: Object.fromEntries(valid.map((threshold) => [
+        threshold.metric,
+        { lower: threshold.min as number, upper: threshold.max as number },
+      ])),
+      dataset_ids: activeIds === null ? undefined : activeIds,
+    });
     if (data) {
-      setResults(data);
-      const anomalyCount = data.results.filter((r) => r.prediction).length;
-      toast({ title: 'Detection complete', description: `${formatNumber(anomalyCount)} anomalies found in ${formatNumber(data.results.length)} observations.` });
+      if (isDetectionResponse(data)) {
+        setResults(data);
+        const anomalyCount = data.results.filter((r) => r.prediction).length;
+        toast({ title: 'Detection complete', description: `${formatNumber(anomalyCount)} anomalies found in ${formatNumber(data.results.length)} observations.` });
+      } else {
+        setResults(null);
+        toast({ title: 'Detection complete', description: `${formatNumber(data.records)} observations processed and ${formatNumber(data.alerts)} alerts created.` });
+      }
     } else if (mutation.state.status === 'error') {
       toast({ title: 'Detection failed', description: mutation.state.message, variant: 'destructive' });
     }
@@ -136,19 +152,35 @@ function GenericDetectionTab() {
 
 function AdvancedDetectionTab() {
   const { config, setConfig } = useActiveConfig();
+  const { activeIds } = useActiveDatasets();
   const [method, setMethod] = useState<AdvancedMethod>('zscore');
   const [results, setResults] = useState<DetectionResponse | null>(null);
-  const mutation = useBackendMutation<{ method: AdvancedMethod; sensitivity: number; window_size?: number }, DetectionResponse>('/api/v1/detection/advanced');
+  const mutation = useBackendMutation<{
+    method: 'z_score' | 'rolling_z_score' | 'multivariate';
+    z_score_sensitivity: number;
+    rolling_window_size: number;
+    multivariate_sensitivity: number;
+    dataset_ids?: string[];
+  }, DetectionResponse | DetectionRunSummary>('/api/v1/detection/advanced');
 
   const handleRun = async () => {
-    const body: Record<string, unknown> = { method, sensitivity: config.zScoreSensitivity };
-    if (method === 'rolling_zscore') body.window_size = config.rollingWindowSize;
-    if (method === 'multivariate') body.sensitivity = config.multivariateSensitivity;
-    const data = await mutation.run(body as { method: AdvancedMethod; sensitivity: number; window_size?: number });
+    const body = {
+      method: method === 'zscore' ? 'z_score' : method === 'rolling_zscore' ? 'rolling_z_score' : 'multivariate',
+      z_score_sensitivity: config.zScoreSensitivity,
+      rolling_window_size: config.rollingWindowSize,
+      multivariate_sensitivity: config.multivariateSensitivity,
+      dataset_ids: activeIds === null ? undefined : activeIds,
+    } as const;
+    const data = await mutation.run(body);
     if (data) {
-      setResults(data);
-      const anomalyCount = data.results.filter((r) => r.prediction).length;
-      toast({ title: 'Detection complete', description: `${formatNumber(anomalyCount)} anomalies found in ${formatNumber(data.results.length)} observations.` });
+      if (isDetectionResponse(data)) {
+        setResults(data);
+        const anomalyCount = data.results.filter((r) => r.prediction).length;
+        toast({ title: 'Detection complete', description: `${formatNumber(anomalyCount)} anomalies found in ${formatNumber(data.results.length)} observations.` });
+      } else {
+        setResults(null);
+        toast({ title: 'Detection complete', description: `${formatNumber(data.records)} observations processed and ${formatNumber(data.alerts)} alerts created.` });
+      }
     } else if (mutation.state.status === 'error') {
       toast({ title: 'Detection failed', description: mutation.state.message, variant: 'destructive' });
     }

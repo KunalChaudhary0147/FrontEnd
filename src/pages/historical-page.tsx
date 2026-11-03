@@ -10,8 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBackendQuery } from '@/hooks/use-backend-query';
+import { useActiveDatasets } from '@/hooks/use-active-datasets';
 import { toast } from '@/hooks/use-toast';
-import { describeError, downloadFromBackend } from '@/lib/api';
+import {
+  describeError,
+  downloadFromBackend,
+  normalizeAdvancedDetectionResults,
+  normalizeCatalog,
+  normalizeGenericDetectionResults,
+  normalizeTelemetryResponse,
+} from '@/lib/api';
+import type { QueryValue } from '@/lib/api';
 import { formatDateTime, formatDecimal } from '@/lib/format';
 import type {
   AdvancedDetectionResultsResponse,
@@ -42,7 +51,7 @@ export function HistoricalPage() {
   );
 }
 
-function useExportButton(endpoint: string, filename: string, params: Record<string, string | number | undefined>) {
+function useExportButton(endpoint: string, filename: string, params: Record<string, QueryValue>) {
   const [exporting, setExporting] = useState(false);
   const handleExport = async () => {
     setExporting(true);
@@ -59,24 +68,25 @@ function useExportButton(endpoint: string, filename: string, params: Record<stri
 }
 
 function TelemetryHistoryTab() {
+  const { activeIds } = useActiveDatasets();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [metric, setMetric] = useState('__all__');
   const [entity, setEntity] = useState('__all__');
   const [anomalyStatus, setAnomalyStatus] = useState('__all__');
 
-  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog');
+  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog', { dataset_ids: activeIds === null ? undefined : activeIds }, normalizeCatalog);
   const catalog = catalogQuery.state.status === 'ready' ? catalogQuery.state.data : null;
 
   const params = {
-    start_date: startDate || undefined,
-    end_date: endDate || undefined,
-    metric: metric !== '__all__' ? metric : undefined,
-    entity: entity !== '__all__' ? entity : undefined,
-    is_anomaly: anomalyStatus === 'anomaly' ? 'true' : anomalyStatus === 'normal' ? 'false' : undefined,
-    limit: 200,
+    start: startDate || undefined,
+    end: endDate || undefined,
+    metric_name: metric !== '__all__' ? metric : undefined,
+    entity_id: entity !== '__all__' ? entity : undefined,
+    anomaly: anomalyStatus === 'anomaly' ? 'true' : anomalyStatus === 'normal' ? 'false' : undefined,
+    dataset_ids: activeIds === null ? undefined : activeIds,
   };
-  const query = useBackendQuery<TelemetryResponse>('/api/v1/telemetry', params);
+  const query = useBackendQuery<TelemetryResponse>('/api/v1/telemetry', params, normalizeTelemetryResponse);
   const { exporting, handleExport } = useExportButton('/api/v1/export/telemetry', 'telemetry_history.csv', params);
 
   return (
@@ -146,21 +156,23 @@ function TelemetryHistoryTab() {
 }
 
 function GenericHistoryTab() {
+  const { activeIds } = useActiveDatasets();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [metric, setMetric] = useState('__all__');
   const [entity, setEntity] = useState('__all__');
 
-  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog');
+  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog', { dataset_ids: activeIds === null ? undefined : activeIds }, normalizeCatalog);
   const catalog = catalogQuery.state.status === 'ready' ? catalogQuery.state.data : null;
 
   const params = {
-    start_date: startDate || undefined,
-    end_date: endDate || undefined,
-    metric: metric !== '__all__' ? metric : undefined,
-    entity: entity !== '__all__' ? entity : undefined,
+    start: startDate || undefined,
+    end: endDate || undefined,
+    metric_name: metric !== '__all__' ? metric : undefined,
+    entity_id: entity !== '__all__' ? entity : undefined,
+    dataset_ids: activeIds === null ? undefined : activeIds,
   };
-  const query = useBackendQuery<GenericDetectionResultsResponse>('/api/v1/detection/generic/results', params);
+  const query = useBackendQuery<GenericDetectionResultsResponse>('/api/v1/detection/generic/results', params, normalizeGenericDetectionResults);
   const { exporting, handleExport } = useExportButton('/api/v1/export/detection/generic', 'generic_detection_history.csv', params);
 
   return (
@@ -221,23 +233,25 @@ function GenericHistoryTab() {
 }
 
 function AdvancedHistoryTab() {
+  const { activeIds } = useActiveDatasets();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [metric, setMetric] = useState('__all__');
   const [entity, setEntity] = useState('__all__');
   const [method, setMethod] = useState('__all__');
 
-  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog');
+  const catalogQuery = useBackendQuery<Catalog>('/api/v1/catalog', { dataset_ids: activeIds === null ? undefined : activeIds }, normalizeCatalog);
   const catalog = catalogQuery.state.status === 'ready' ? catalogQuery.state.data : null;
 
   const params = {
-    start_date: startDate || undefined,
-    end_date: endDate || undefined,
-    metric: metric !== '__all__' ? metric : undefined,
-    entity: entity !== '__all__' ? entity : undefined,
-    method: method !== '__all__' ? method : undefined,
+    start: startDate || undefined,
+    end: endDate || undefined,
+    metric_name: metric !== '__all__' ? metric : undefined,
+    entity_id: entity !== '__all__' ? entity : undefined,
+    detection_method: method !== '__all__' ? method : undefined,
+    dataset_ids: activeIds === null ? undefined : activeIds,
   };
-  const query = useBackendQuery<AdvancedDetectionResultsResponse>('/api/v1/detection/advanced/results', params);
+  const query = useBackendQuery<AdvancedDetectionResultsResponse>('/api/v1/detection/advanced/results', params, normalizeAdvancedDetectionResults);
   const { exporting, handleExport } = useExportButton('/api/v1/export/detection/advanced', 'advanced_detection_history.csv', params);
 
   return (

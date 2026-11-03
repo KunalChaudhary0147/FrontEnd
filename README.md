@@ -14,7 +14,7 @@ Anomaly Monitor lets you upload telemetry CSV data, explore it visually, run thr
 4. **Historical Analysis** — Three tabs (telemetry, generic detection, advanced detection history) with filters and CSV export.
 5. **Anomaly Detection** — Generic threshold detection and advanced statistical methods (z-score, rolling z-score, multivariate) with results and evaluation.
 6. **Alerts** — Alert management with summary cards, filters, acknowledge/resolve actions, and detail view.
-7. **Configuration** — Named configuration management with metric thresholds, statistical settings, and severity boundaries. Saved to Supabase.
+7. **Configuration** — Named configuration management with metric thresholds, statistical settings, and severity boundaries. Saved in SQLite through the FastAPI backend.
 
 ## Backend Connection
 
@@ -34,7 +34,7 @@ The frontend connects to a FastAPI backend via the `VITE_BACKEND_URL` environmen
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check |
-| GET | `/overview` | Dashboard summary data |
+| GET | `/api/v1/overview` | Dashboard summary data |
 | GET | `/api/v1/catalog` | Available metrics and entities |
 | GET | `/api/v1/telemetry` | Telemetry records with filters |
 | POST | `/api/v1/ingestion/csv` | Upload CSV (multipart form) |
@@ -46,7 +46,15 @@ The frontend connects to a FastAPI backend via the `VITE_BACKEND_URL` environmen
 | POST | `/api/v1/alerts/{id}/acknowledge` | Acknowledge an alert |
 | POST | `/api/v1/alerts/{id}/resolve` | Resolve an alert |
 | POST | `/api/v1/configurations` | Save configuration to backend |
+| GET | `/api/v1/configurations` | List saved configurations |
 | GET | `/api/v1/configurations/{name}` | Load configuration from backend |
+| DELETE | `/api/v1/configurations/{name}` | Delete saved configuration |
+| GET | `/api/v1/datasets` | List uploaded datasets |
+| GET | `/api/v1/datasets/{id}` | Get dataset metadata |
+| GET | `/api/v1/datasets/{id}/preview` | Preview dataset records |
+| GET | `/api/v1/datasets/{id}/quality` | Get dataset quality metrics |
+| DELETE | `/api/v1/datasets/{id}` | Delete one dataset and associated data |
+| POST | `/api/v1/datasets/delete` | Delete multiple datasets and associated data |
 | GET | `/api/v1/export/telemetry` | Export telemetry as CSV |
 | GET | `/api/v1/export/detection/generic` | Export generic detection results as CSV |
 | GET | `/api/v1/export/detection/advanced` | Export advanced detection results as CSV |
@@ -60,9 +68,7 @@ The frontend connects to a FastAPI backend via the `VITE_BACKEND_URL` environmen
 - `entity_column` — name of the entity ID column
 - `label_column` (optional) — name of the ground-truth label column
 
-## Supabase
-
-Saved configurations and alert status overrides are persisted in the project's Supabase database, so they work independently of the backend. The `anomaly_configurations` and `alert_status_overrides` tables are created via migration.
+Configuration saves, loads, deletes, and alert lifecycle changes are persisted by the FastAPI backend in SQLite. No Supabase credentials are required.
 
 ## Development
 
